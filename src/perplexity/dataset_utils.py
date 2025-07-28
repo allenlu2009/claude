@@ -1,0 +1,202 @@
+"""
+Dataset utilities for perplexity evaluation.
+
+This module provides functions for loading and preprocessing datasets used in
+perplexity evaluation, with error handling and validation.
+"""
+
+import logging
+from typing import Optional, Any
+from datasets import load_dataset
+from ..config.model_configs import get_dataset_config, DatasetConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+
+class DatasetLoadError(Exception):
+    """Custom exception for dataset loading errors."""
+
+    pass
+
+
+def load_dataset_text(dataset_name: str, max_samples: Optional[int] = None) -> str:
+    """
+    Load text from a dataset and concatenate into a single string.
+
+    Args:
+        dataset_name: Name of the dataset to load
+        max_samples: Optional limit on number of samples to process
+
+    Returns:
+        Concatenated text string from the dataset
+
+    Raises:
+        DatasetLoadError: If dataset loading fails
+    """
+    try:
+        dataset_config = get_dataset_config(dataset_name)
+        return _load_text_from_config(dataset_config, max_samples)
+    except Exception as e:
+        raise DatasetLoadError(
+            f"Failed to load dataset '{dataset_name}': {str(e)}"
+        ) from e
+
+
+def _load_text_from_config(
+    config: DatasetConfig, max_samples: Optional[int] = None
+) -> str:
+    """
+    Load text from dataset using configuration.
+
+    Args:
+        config: Dataset configuration
+        max_samples: Optional limit on samples
+
+    Returns:
+        Concatenated text string
+    """
+    logger.info(f"Loading dataset: {config.name}")
+
+    try:
+        # Handle different dataset format types
+        if isinstance(config.hf_dataset, tuple):
+            dataset_name, dataset_config = config.hf_dataset
+            dataset = load_dataset(dataset_name, dataset_config, split=config.split)
+        else:
+            dataset = load_dataset(config.hf_dataset, split=config.split)
+
+        logger.info(f"Dataset loaded successfully. Total samples: {len(dataset)}")
+
+        # Apply sample limit
+        if max_samples is not None:
+            dataset = dataset.select(range(min(max_samples, len(dataset))))
+            logger.info(f"Limited to {len(dataset)} samples")
+        elif config.max_samples is not None:
+            dataset = dataset.select(range(min(config.max_samples, len(dataset))))
+            logger.info(f"Limited to {len(dataset)} samples (from config)")
+
+        # Extract text based on dataset-specific handling
+        text = _extract_text_from_dataset(dataset, config)
+
+        logger.info(f"Text extraction complete. Total length: {len(text)} characters")
+        return text
+
+    except Exception as e:
+        logger.error(f"Error loading dataset {config.name}: {str(e)}")
+        raise
+
+
+def _extract_text_from_dataset(dataset: Any, config: DatasetConfig) -> str:
+    """
+    Extract and concatenate text from dataset based on configuration.
+
+    Args:
+        dataset: Loaded HuggingFace dataset
+        config: Dataset configuration
+
+    Returns:
+        Concatenated text string
+    """
+    text_field = config.text_field
+
+    if config.name == "PTB":
+        # Special handling for PTB dataset - join sentences with newlines
+        texts = dataset[text_field]
+        return " \n ".join(texts)
+    elif config.name in ["Wikitext2", "Wikitext103"]:
+        # Join with double newlines to preserve document structure
+        texts = dataset[text_field]
+        # Filter out empty strings
+        texts = [text for text in texts if text.strip()]
+        return "\n\n".join(texts)
+    elif config.name == "Shakespeare":
+        # Shakespeare dataset might be structured differently
+        texts = dataset[text_field]
+        return "\n\n".join(texts) if isinstance(texts, list) else texts
+    elif config.name == "C4":
+        # C4 has clean text, join with double newlines
+        texts = dataset[text_field]
+        return "\n\n".join(texts)
+    else:
+        # Default handling - join with double newlines
+        texts = dataset[text_field]
+        if isinstance(texts, list):
+            return "\n\n".join(str(text) for text in texts if str(text).strip())
+        else:
+            return str(texts)
+
+
+def validate_text_length(text: str, min_length: int = 1000) -> bool:
+    """
+    Validate that text meets minimum length requirements.
+
+    Args:
+        text: Text to validate
+        min_length: Minimum required length in characters
+
+    Returns:
+        True if text is valid, False otherwise
+    """
+    if len(text) < min_length:
+        logger.warning(f"Text length ({len(text)}) is below minimum ({min_length})")
+        return False
+    return True
+
+
+def get_text_stats(text: str) -> dict:
+    """
+    Get basic statistics about the text.
+
+    Args:
+        text: Text to analyze
+
+    Returns:
+        Dictionary with text statistics
+    """
+    lines = text.split("\n")
+    words = text.split()
+
+    return {
+        "total_characters": len(text),
+        "total_lines": len(lines),
+        "total_words": len(words),
+        "avg_line_length": (
+            sum(len(line) for line in lines) / len(lines) if lines else 0
+        ),
+        "avg_word_length": (
+            sum(len(word) for word in words) / len(words) if words else 0
+        ),
+    }
+
+
+def preview_text(text: str, num_chars: int = 500) -> str:
+    """
+    Get a preview of the text for inspection.
+
+    Args:
+        text: Text to preview
+        num_chars: Number of characters to include in preview
+
+    Returns:
+        Preview string
+    """
+    if len(text) <= num_chars:
+        return text
+    return text[:num_chars] + "..."
+
+
+# Convenience functions for specific datasets
+def load_wikitext2(max_samples: Optional[int] = None) -> str:
+    """Load WikiText-2 dataset."""
+    return load_dataset_text("Wikitext2", max_samples)
+
+
+def load_ptb(max_samples: Optional[int] = None) -> str:
+    """Load Penn Treebank dataset."""
+    return load_dataset_text("PTB", max_samples)
+
+
+def load_shakespeare(max_samples: Optional[int] = None) -> str:
+    """Load Shakespeare dataset."""
+    return load_dataset_text("Shakespeare", max_samples)

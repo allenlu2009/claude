@@ -1,0 +1,19 @@
+# Core dependencies for perplexity evaluation system
+torch>=2.1.0
+transformers>=4.40.0
+datasets>=2.18.0
+pydantic>=2.5.0
+
+# Flash attention support (RTX 3060 compatible) - optional, install separately if GPU supports it
+# flash-attn>=2.5.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.7.0
+
+# Optional dependencies for enhanced functionality
+python-dotenv>=1.0.0
+tqdm>=4.66.0
