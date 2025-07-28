@@ -6,7 +6,9 @@ sliding window approach for better context utilization.
 """
 
 import logging
+import math
 import time
+import warnings
 import torch
 from typing import List, Tuple
 from tqdm import tqdm
@@ -171,7 +173,10 @@ class PerplexityEvaluator:
 
                 # Forward pass with no gradient computation
                 with torch.no_grad():
-                    outputs = model(input_ids, labels=target_ids)  # type: ignore
+                    # Suppress transformer warnings about unrecognized loss types
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore", message=".*loss_type.*was set in the config.*")
+                        outputs = model(input_ids, labels=target_ids)  # type: ignore
                     neg_log_likelihood = outputs.loss
 
                 # Count valid tokens (not masked)
@@ -201,8 +206,8 @@ class PerplexityEvaluator:
         avg_nll = nll_sum / n_tokens if n_tokens > 0 else float("inf")
 
         # Compute perplexity from average negative log-likelihood
-        if n_tokens > 0 and not torch.isinf(torch.tensor(avg_nll)):
-            perplexity = torch.exp(torch.tensor(avg_nll)).item()
+        if n_tokens > 0 and not math.isinf(avg_nll):
+            perplexity = math.exp(avg_nll)
         else:
             perplexity = float("inf")
 
