@@ -37,6 +37,7 @@ class PerplexityEvaluator:
         tokenizer: AutoTokenizer,
         chunk_params: ChunkParams,
         max_length: int,
+        handle_residue: bool = True,
     ) -> Tuple[List[torch.Tensor], List[Tuple[int, int, int]]]:
         """
         Tokenize text and create overlapping chunks using sliding window strategy.
@@ -46,6 +47,7 @@ class PerplexityEvaluator:
             tokenizer: Tokenizer to use
             chunk_params: Chunking parameters
             max_length: Maximum sequence length supported by model
+            handle_residue: Whether to include residue tokens as final chunk
 
         Returns:
             Tuple of (samples, begin_locs) where:
@@ -62,7 +64,8 @@ class PerplexityEvaluator:
 
         # Adjust block size to not exceed model's max length
         block_size = min(chunk_params.block_size, max_length)
-        stride = chunk_params.stride
+        # Recalculate stride based on adjusted block size
+        stride = int(block_size * chunk_params.stride_ratio)
 
         if stride > block_size:
             logger.warning(
@@ -98,7 +101,18 @@ class PerplexityEvaluator:
             if end_loc == seq_len:
                 break
 
-        logger.info(f"Created {len(samples)} chunks for evaluation")
+        # Handle residue tokens (remaining tokens that don't fill a complete chunk)
+        if handle_residue and begin_locs:
+            last_end = begin_locs[-1][1]  # Get the end position of the last chunk
+            if last_end < seq_len:
+                # Create a final chunk with residue tokens
+                residue_chunk = tokens[:, last_end:seq_len]
+                if residue_chunk.size(1) >= 2:  # Only if meaningful residue
+                    samples.append(residue_chunk)
+                    begin_locs.append((last_end, seq_len, last_end))
+                    logger.info(f"Added residue chunk: {residue_chunk.size(1)} tokens")
+
+        logger.info(f"Created {len(samples)} chunks for evaluation (including residue)")
         return samples, begin_locs
 
     def evaluate_model_on_chunks(
@@ -227,6 +241,7 @@ class PerplexityEvaluator:
         dataset_name: str,
         chunk_params: ChunkParams,
         max_length: int,
+        handle_residue: bool = True,
     ) -> EvaluationResult:
         """
         Complete evaluation pipeline for a text string.
@@ -239,6 +254,7 @@ class PerplexityEvaluator:
             dataset_name: Name of the dataset
             chunk_params: Chunking parameters
             max_length: Maximum sequence length
+            handle_residue: Whether to include residue tokens
 
         Returns:
             EvaluationResult with all metrics
@@ -247,7 +263,7 @@ class PerplexityEvaluator:
 
         # Tokenize and chunk the text
         samples, begin_locs = self.tokenize_and_chunk(
-            text, tokenizer, chunk_params, max_length
+            text, tokenizer, chunk_params, max_length, handle_residue
         )
 
         if not samples:

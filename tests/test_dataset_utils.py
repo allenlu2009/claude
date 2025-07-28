@@ -227,7 +227,7 @@ class TestConvenienceFunctions:
         
         result = load_wikitext2(max_samples=100)
         
-        mock_load.assert_called_once_with("Wikitext2", 100)
+        mock_load.assert_called_once_with("Wikitext2", 100, None, False)
         assert result == "Sample WikiText-2 content"
     
     @patch('src.perplexity.dataset_utils.load_dataset_text')
@@ -237,7 +237,7 @@ class TestConvenienceFunctions:
         
         result = load_ptb(max_samples=50)
         
-        mock_load.assert_called_once_with("PTB", 50)
+        mock_load.assert_called_once_with("PTB", 50, None, False)
         assert result == "Sample PTB content"
     
     @patch('src.perplexity.dataset_utils.load_dataset_text')
@@ -247,7 +247,7 @@ class TestConvenienceFunctions:
         
         result = load_shakespeare()
         
-        mock_load.assert_called_once_with("Shakespeare", None)
+        mock_load.assert_called_once_with("Shakespeare", None, None, False)
         assert result == "Sample Shakespeare content"
 
 

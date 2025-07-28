@@ -92,7 +92,7 @@ Examples:
         nargs="+",
         type=float,
         default=[0.25, 0.5, 0.75, 1.0],
-        help="Stride ratios to test (default: 0.25 0.5 0.75 1.0)",
+        help="Stride ratios to test, range 0.1-1.0 (default: 0.25 0.5 0.75 1.0)",
     )
     eval_parser.add_argument(
         "--device",
@@ -108,6 +108,17 @@ Examples:
     )
     eval_parser.add_argument(
         "--max-samples", type=int, help="Maximum number of samples per dataset"
+    )
+    eval_parser.add_argument(
+        "--max-tokens", type=int, help="Maximum number of tokens per dataset"
+    )
+    eval_parser.add_argument(
+        "--use-all-tokens", action="store_true", 
+        help="Use all available tokens from dataset (ignores max-samples)"
+    )
+    eval_parser.add_argument(
+        "--no-residue", action="store_true",
+        help="Skip residue tokens that don't fill complete chunks"
     )
     eval_parser.add_argument(
         "--output", type=str, help="Output file for results (JSON format)"
@@ -254,6 +265,9 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
             chunk_params=chunk_params,
             device=args.device,
             max_samples=args.max_samples,
+            max_tokens=args.max_tokens,
+            use_all_tokens=args.use_all_tokens,
+            handle_residue=not args.no_residue,
             output_file=args.output,
             use_flash_attention=not args.no_flash_attention,
             memory_limit_gb=args.memory_limit,
@@ -297,8 +311,13 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
             for dataset_name in config.datasets:
                 logger.info(f"\nEvaluating on dataset: {dataset_name}")
 
-                # Load dataset text
-                text = load_dataset_text(dataset_name, config.max_samples)
+                # Load dataset text with token-based options
+                text = load_dataset_text(
+                    dataset_name, 
+                    config.max_samples,
+                    config.max_tokens,
+                    config.use_all_tokens
+                )
 
                 # Evaluate with each chunk parameter set
                 for chunk_param in config.chunk_params:
@@ -315,6 +334,7 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                         dataset_name=dataset_name,
                         chunk_params=chunk_param,
                         max_length=model_config.max_length,
+                        handle_residue=config.handle_residue,
                     )
 
                     all_results.append(result)

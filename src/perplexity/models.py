@@ -38,7 +38,7 @@ class ChunkParams(BaseModel):
 
     block_size: int = Field(gt=0, description="Size of each chunk in tokens")
     stride_ratio: float = Field(
-        ge=0.1, le=2.0, description="Stride as ratio of block_size (0.1-2.0, >1.0 for testing)"
+        description="Stride as ratio of block_size (0.1-1.0, values outside range will be clamped)"
     )
     batch_size: int = Field(default=1, gt=0, description="Batch size for evaluation")
 
@@ -50,8 +50,15 @@ class ChunkParams(BaseModel):
     @field_validator("stride_ratio")
     @classmethod
     def validate_stride_ratio(cls, v: float) -> float:
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if v < 0.1:
-            raise ValueError("Stride ratio must be at least 0.1 for meaningful overlap")
+            logger.warning(f"Stride ratio {v} is below minimum 0.1, clamping to 0.1")
+            return 0.1
+        elif v > 1.0:
+            logger.warning(f"Stride ratio {v} is above maximum 1.0, clamping to 1.0")
+            return 1.0
         return v
 
 
@@ -104,6 +111,15 @@ class PerplexityConfig(BaseModel):
     device: str = Field(default="cuda", description="Device to use for evaluation")
     max_samples: Optional[int] = Field(
         default=None, description="Global limit on samples per dataset"
+    )
+    max_tokens: Optional[int] = Field(
+        default=None, description="Maximum tokens to use from each dataset"
+    )
+    use_all_tokens: bool = Field(
+        default=False, description="Use all available tokens from dataset (ignores max_samples)"
+    )
+    handle_residue: bool = Field(
+        default=True, description="Include residue tokens that don't fill a complete chunk"
     )
     output_file: Optional[str] = Field(default=None, description="File to save results")
     use_flash_attention: bool = Field(

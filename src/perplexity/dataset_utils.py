@@ -20,13 +20,20 @@ class DatasetLoadError(Exception):
     pass
 
 
-def load_dataset_text(dataset_name: str, max_samples: Optional[int] = None) -> str:
+def load_dataset_text(
+    dataset_name: str, 
+    max_samples: Optional[int] = None,
+    max_tokens: Optional[int] = None,
+    use_all_tokens: bool = False
+) -> str:
     """
     Load text from a dataset and concatenate into a single string.
 
     Args:
         dataset_name: Name of the dataset to load
         max_samples: Optional limit on number of samples to process
+        max_tokens: Optional limit on number of tokens to extract
+        use_all_tokens: If True, use all available tokens (ignores max_samples)
 
     Returns:
         Concatenated text string from the dataset
@@ -36,7 +43,7 @@ def load_dataset_text(dataset_name: str, max_samples: Optional[int] = None) -> s
     """
     try:
         dataset_config = get_dataset_config(dataset_name)
-        return _load_text_from_config(dataset_config, max_samples)
+        return _load_text_from_config(dataset_config, max_samples, max_tokens, use_all_tokens)
     except Exception as e:
         raise DatasetLoadError(
             f"Failed to load dataset '{dataset_name}': {str(e)}"
@@ -44,7 +51,10 @@ def load_dataset_text(dataset_name: str, max_samples: Optional[int] = None) -> s
 
 
 def _load_text_from_config(
-    config: DatasetConfig, max_samples: Optional[int] = None
+    config: DatasetConfig, 
+    max_samples: Optional[int] = None,
+    max_tokens: Optional[int] = None,
+    use_all_tokens: bool = False
 ) -> str:
     """
     Load text from dataset using configuration.
@@ -52,6 +62,8 @@ def _load_text_from_config(
     Args:
         config: Dataset configuration
         max_samples: Optional limit on samples
+        max_tokens: Optional limit on tokens to extract
+        use_all_tokens: If True, use all available tokens
 
     Returns:
         Concatenated text string
@@ -68,8 +80,10 @@ def _load_text_from_config(
 
         logger.info(f"Dataset loaded successfully. Total samples: {len(dataset)}")
 
-        # Apply sample limit
-        if max_samples is not None:
+        # Handle different sampling strategies
+        if use_all_tokens:
+            logger.info("Using all available tokens from dataset")
+        elif max_samples is not None:
             dataset = dataset.select(range(min(max_samples, len(dataset))))
             logger.info(f"Limited to {len(dataset)} samples")
         elif config.max_samples is not None:
@@ -78,6 +92,11 @@ def _load_text_from_config(
 
         # Extract text based on dataset-specific handling
         text = _extract_text_from_dataset(dataset, config)
+        
+        # Apply token-based truncation if requested
+        if max_tokens is not None:
+            text = _truncate_text_by_tokens(text, max_tokens)
+            logger.info(f"Text truncated to approximately {max_tokens} tokens")
 
         logger.info(f"Text extraction complete. Total length: {len(text)} characters")
         return text
@@ -186,17 +205,68 @@ def preview_text(text: str, num_chars: int = 500) -> str:
     return text[:num_chars] + "..."
 
 
+def _truncate_text_by_tokens(text: str, max_tokens: int) -> str:
+    """
+    Truncate text to approximately max_tokens using rough estimation.
+    
+    Args:
+        text: Text to truncate
+        max_tokens: Maximum number of tokens (approximate)
+        
+    Returns:
+        Truncated text string
+        
+    Note:
+        Uses rough estimation of ~4 characters per token for English text.
+        This avoids expensive tokenization during data loading.
+    """
+    if max_tokens <= 0:
+        return ""
+    
+    # Rough estimation: ~4 characters per token for English text
+    # This is approximate but avoids expensive tokenization during loading
+    estimated_chars = max_tokens * 4
+    
+    if len(text) <= estimated_chars:
+        return text
+    
+    # Truncate at word boundary near the estimated position
+    truncated = text[:estimated_chars]
+    
+    # Find last complete word to avoid cutting mid-word
+    last_space = truncated.rfind(' ')
+    if last_space > estimated_chars * 0.9:  # Only if not too far back
+        truncated = truncated[:last_space]
+    
+    logger.info(f"Truncated text from {len(text)} to {len(truncated)} characters "
+                f"(targeting ~{max_tokens} tokens)")
+    
+    return truncated
+
+
 # Convenience functions for specific datasets
-def load_wikitext2(max_samples: Optional[int] = None) -> str:
+def load_wikitext2(
+    max_samples: Optional[int] = None,
+    max_tokens: Optional[int] = None,
+    use_all_tokens: bool = False
+) -> str:
     """Load WikiText-2 dataset."""
-    return load_dataset_text("Wikitext2", max_samples)
+    return load_dataset_text("Wikitext2", max_samples, max_tokens, use_all_tokens)
 
 
-def load_ptb(max_samples: Optional[int] = None) -> str:
+def load_ptb(
+    max_samples: Optional[int] = None,
+    max_tokens: Optional[int] = None,
+    use_all_tokens: bool = False
+) -> str:
     """Load Penn Treebank dataset."""
-    return load_dataset_text("PTB", max_samples)
+    return load_dataset_text("PTB", max_samples, max_tokens, use_all_tokens)
 
 
-def load_shakespeare(max_samples: Optional[int] = None) -> str:
+def load_shakespeare(
+    max_samples: Optional[int] = None,
+    max_tokens: Optional[int] = None,
+    use_all_tokens: bool = False
+) -> str:
     """Load Shakespeare dataset."""
-    return load_dataset_text("Shakespeare", max_samples)
+    return load_dataset_text("Shakespeare", max_samples, max_tokens, use_all_tokens)
