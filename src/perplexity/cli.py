@@ -14,7 +14,13 @@ from typing import List
 
 from .models import ChunkParams, PerplexityConfig, EvaluationSummary
 from .evaluator import PerplexityEvaluator
-from .model_loader import load_model_and_tokenizer, unload_model, get_device_info
+from .model_loader import (
+    load_model_and_tokenizer, 
+    unload_model, 
+    get_device_info,
+    get_model_max_length,
+    validate_and_adjust_block_size
+)
 from .dataset_utils import load_dataset_text
 from ..config.model_configs import (
     get_model_config,
@@ -307,6 +313,26 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                 memory_limit_gb=config.memory_limit_gb,
             )
 
+            # Get model's actual max length and validate block sizes
+            actual_max_length = get_model_max_length(model_config.hf_name, model_name)
+            
+            # Validate and adjust chunk parameters for this model
+            adjusted_chunk_params = []
+            for chunk_param in config.chunk_params:
+                adjusted_block_size = validate_and_adjust_block_size(
+                    chunk_param.block_size, 
+                    actual_max_length, 
+                    model_name
+                )
+                
+                # Create new chunk params with adjusted block size
+                adjusted_chunk_param = ChunkParams(
+                    block_size=adjusted_block_size,
+                    stride_ratio=chunk_param.stride_ratio,
+                    batch_size=chunk_param.batch_size
+                )
+                adjusted_chunk_params.append(adjusted_chunk_param)
+
             # Evaluate on each dataset
             for dataset_name in config.datasets:
                 logger.info(f"\nEvaluating on dataset: {dataset_name}")
@@ -319,8 +345,8 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                     config.use_all_tokens
                 )
 
-                # Evaluate with each chunk parameter set
-                for chunk_param in config.chunk_params:
+                # Evaluate with each adjusted chunk parameter set
+                for chunk_param in adjusted_chunk_params:
                     logger.info(
                         f"Chunk params: block_size={chunk_param.block_size}, "
                         f"stride_ratio={chunk_param.stride_ratio}"

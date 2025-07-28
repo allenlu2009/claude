@@ -64,9 +64,8 @@ class PerplexityEvaluator:
 
         logger.info(f"Tokenized to {seq_len} tokens")
 
-        # Adjust block size to not exceed model's max length
-        block_size = min(chunk_params.block_size, max_length)
-        # Recalculate stride based on adjusted block size
+        # Use block size from chunk params (already validated at CLI level)
+        block_size = chunk_params.block_size
         stride = int(block_size * chunk_params.stride_ratio)
 
         if stride > block_size:

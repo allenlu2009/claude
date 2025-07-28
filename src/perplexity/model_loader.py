@@ -8,7 +8,7 @@ automatic memory optimization and flash attention fallback strategies.
 import logging
 import torch
 from typing import Tuple, Optional, Dict, Any
-from transformers import AutoTokenizer, AutoModelForCausalLM  # type: ignore
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig  # type: ignore
 from ..config.model_configs import get_model_config, ModelConfig
 
 # Set up logging
@@ -19,6 +19,71 @@ class ModelLoadError(Exception):
     """Custom exception for model loading errors."""
 
     pass
+
+
+def get_model_max_length(model_name: str, display_name: Optional[str] = None) -> Optional[int]:
+    """
+    Get the maximum sequence length supported by a model.
+    
+    Args:
+        model_name: HuggingFace model identifier
+        display_name: Optional display name for logging
+        
+    Returns:
+        Maximum sequence length in tokens, or None if not found
+    """
+    display = display_name if display_name else model_name
+    
+    try:
+        config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+        
+        # Try primary attribute first
+        max_length = getattr(config, 'max_position_embeddings', None)
+        
+        if max_length:
+            logger.info(f"{display} max length: {max_length:,} tokens")
+            return max_length
+        else:
+            # Try other attributes for non-standard models
+            for attr in ['n_positions', 'max_sequence_length', 'n_ctx']:
+                if hasattr(config, attr):
+                    max_length = getattr(config, attr)
+                    logger.info(f"{display} max length: {max_length:,} tokens (via {attr})")
+                    return max_length
+                    
+        logger.warning(f"{display}: Could not determine max length from config")
+        return None
+        
+    except Exception as e:
+        logger.error(f"{display}: Error getting max length - {str(e)[:50]}...")
+        return None
+
+
+def validate_and_adjust_block_size(block_size: int, max_length: Optional[int], model_name: str) -> int:
+    """
+    Validate block_size against model's max_length and adjust if necessary.
+    
+    Args:
+        block_size: Requested block size
+        max_length: Model's maximum sequence length
+        model_name: Model name for logging
+        
+    Returns:
+        Adjusted block size (clamped to max_length if necessary)
+    """
+    if max_length is None:
+        logger.warning(f"{model_name}: Could not determine max length, using block_size={block_size}")
+        return block_size
+        
+    if block_size > max_length:
+        logger.warning(
+            f"{model_name}: block_size ({block_size}) exceeds max_length ({max_length}), "
+            f"adjusting block_size to {max_length}"
+        )
+        return max_length
+    else:
+        logger.info(f"{model_name}: block_size ({block_size}) is within max_length ({max_length})")
+        return block_size
 
 
 class MemoryConstraintError(Exception):
