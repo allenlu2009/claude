@@ -367,7 +367,7 @@ def save_results(summary: EvaluationSummary, output_file: str) -> None:
     """Save evaluation results to file."""
     try:
         with open(output_file, "w") as f:
-            json.dump(summary.dict(), f, indent=2, default=str)
+            json.dump(summary.model_dump(), f, indent=2, default=str)
         logger.info(f"Results saved to {output_file}")
     except Exception as e:
         logger.error(f"Failed to save results: {e}")
@@ -387,13 +387,14 @@ def print_summary(summary: EvaluationSummary) -> None:
 
     if summary.results:
         print(
-            f"\n{'Model':<20} {'Dataset':<15} {'Stride':<8} {'Perplexity':<12} {'Tokens':<10}"
+            f"\n{'Model':<20} {'Dataset':<15} {'Block':<8} {'Stride':<8} {'Perplexity':<12} {'Tokens':<10}"
         )
-        print("-" * 70)
+        print("-" * 80)
         for result in summary.results:
             print(
                 f"{result.model_name:<20} "
                 f"{result.dataset_name:<15} "
+                f"{result.chunk_params.block_size:<8} "
                 f"{result.chunk_params.stride_ratio:<8.2f} "
                 f"{result.perplexity:<12.4f} "
                 f"{result.num_tokens:<10}"
