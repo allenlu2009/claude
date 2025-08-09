@@ -217,7 +217,7 @@ class PerplexityEvaluator:
         memory_used_mb = 0.0
         if initial_memory.get("cuda_available") and final_memory.get("cuda_available"):
             memory_used_mb = final_memory["max_allocated_mb"] - initial_memory.get(
-                "allocated_mb", 0
+                "max_allocated_mb", 0
             )
 
         logger.info(

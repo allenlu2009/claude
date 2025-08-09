@@ -48,6 +48,8 @@ class TestPerplexityEvaluator:
         # Create test data with known length
         token_ids = list(range(200))  # 200 tokens
         mock_tokenizer.return_value = {"input_ids": torch.tensor([token_ids])}
+        mock_tokenizer.side_effect = lambda text, **kwargs: {"input_ids": torch.tensor([token_ids])}
+        mock_tokenizer.__call__ = lambda text, **kwargs: {"input_ids": torch.tensor([token_ids])}
         
         chunk_params = ChunkParams(block_size=100, stride_ratio=0.5, batch_size=1)
         

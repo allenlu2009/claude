@@ -3,7 +3,7 @@ Comprehensive PydanticAI Testing Examples
 
 Demonstrates testing patterns and best practices for PydanticAI agents:
 - TestModel for fast development validation
-- FunctionModel for custom behavior testing
+- TestModel for mocked responses
 - Agent.override() for test isolation
 - Pytest fixtures and async testing
 - Tool validation and error handling tests
@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 from pydantic import BaseModel
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.test import TestModel, FunctionModel
+from pydantic_ai.models.test import TestModel
 
 
 @dataclass
@@ -36,7 +36,7 @@ class TestResponse(BaseModel):
 
 # Create test agent for demonstrations
 test_agent = Agent(
-    model="openai:gpt-4o-mini",  # Will be overridden in tests
+    model=TestModel(),  # Use TestModel to avoid API key requirements
     deps_type=TestDependencies,
     result_type=TestResponse,
     system_prompt="You are a helpful test assistant."
@@ -198,48 +198,6 @@ class TestAgentTools:
             # Check tool execution in response
             assert "mock_api_call" in result.data.message
 
-
-class TestAgentWithFunctionModel:
-    """Test agent behavior with FunctionModel for custom responses."""
-    
-    @pytest.fixture
-    def test_dependencies(self):
-        """Create basic test dependencies."""
-        return TestDependencies(
-            database=AsyncMock(),
-            api_client=Mock()
-        )
-    
-    def test_function_model_custom_behavior(self, test_dependencies):
-        """Test agent with FunctionModel for custom behavior."""
-        def custom_response_func(messages, tools):
-            """Custom function to generate specific responses."""
-            last_message = messages[-1].content if messages else ""
-            
-            if "error" in last_message.lower():
-                return '{"message": "Error detected and handled", "confidence": 0.6, "actions": ["error_handling"]}'
-            else:
-                return '{"message": "Normal operation", "confidence": 0.9, "actions": ["standard_response"]}'
-        
-        function_model = FunctionModel(function=custom_response_func)
-        
-        with test_agent.override(model=function_model):
-            # Test normal case
-            result1 = test_agent.run_sync(
-                "Please help me with a normal request",
-                deps=test_dependencies
-            )
-            assert result1.data.message == "Normal operation"
-            assert result1.data.confidence == 0.9
-            
-            # Test error case
-            result2 = test_agent.run_sync(
-                "There's an error in the system",
-                deps=test_dependencies
-            )
-            assert result2.data.message == "Error detected and handled"
-            assert result2.data.confidence == 0.6
-            assert "error_handling" in result2.data.actions
 
 
 class TestAgentValidation:

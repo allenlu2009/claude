@@ -1,10 +1,10 @@
 ## FEATURE:
 
-[Insert your feature here]
+Compute the perplexity of common public models using commom dataset
 
 ## EXAMPLES:
 
-[Provide and explain examples that you have in the `examples/` folder]
+It compute the perplexity of phi3 and phi4 models using wikitext2 dataset
 
 ## DOCUMENTATION:
 
@@ -12,4 +12,4 @@
 
 ## OTHER CONSIDERATIONS:
 
-[Any other considerations or specific requirements - great place to include gotchas that you see AI coding assistants miss with your projects a lot]
+I am using desktop GPU RTX 3060, there is 12GB memory.  Make sure to use flash attention whenever it applies.  If evaluate more than 1 models, do it sequentially and clear the memory before loading a new model.

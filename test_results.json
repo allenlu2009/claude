@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "model_name": "gpt2",
+      "dataset_name": "Wikitext2",
+      "chunk_params": {
+        "block_size": 256,
+        "stride_ratio": 0.5,
+        "batch_size": 1
+      },
+      "avg_nll": 3.6922430992126465,
+      "perplexity": 40.134772340039866,
+      "num_tokens": 450,
+      "memory_used_mb": 0.0,
+      "evaluation_time_seconds": 2.191727876663208,
+      "timestamp": "2025-07-28 21:45:41.589836"
+    }
+  ],
+  "total_time_seconds": 11.619678020477295,
+  "total_models": 1,
+  "total_datasets": 1,
+  "successful_evaluations": 1,
+  "failed_evaluations": 0,
+  "average_perplexity": 40.134772340039866
+}
