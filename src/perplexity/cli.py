@@ -19,7 +19,8 @@ from .model_loader import (
     unload_model, 
     get_device_info,
     get_model_max_length,
-    validate_and_adjust_block_size
+    validate_and_adjust_block_size,
+    resolve_device
 )
 from .dataset_utils import load_dataset_text
 from ..config.model_configs import (
@@ -279,8 +280,9 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
             memory_limit_gb=args.memory_limit,
         )
 
-    # Initialize evaluator
-    evaluator = PerplexityEvaluator(device=config.device)
+    # Resolve device and initialize evaluator
+    resolved_device = resolve_device(config.device)
+    evaluator = PerplexityEvaluator(device=resolved_device)
     all_results = []
     start_time = time.time()
 

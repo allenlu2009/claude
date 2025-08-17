@@ -109,6 +109,13 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=2.2,
         supports_flash_attention=True,
     ),
+    "gemma3-270M": ModelConfig(
+        name="gemma3-270M",
+        hf_name="google/gemma-3-270m",
+        max_length=32768,
+        memory_gb=0.8,  # Estimated for 270M parameters
+        supports_flash_attention=True,
+    ),
     "gemma3-4B": ModelConfig(
         name="gemma3-4B",
         hf_name="google/gemma-3-4b-it",
@@ -208,7 +215,7 @@ PRESET_MODEL_SETS = {
     "phi_models": ["Phi3-mini-4k", "Phi4-mini", "Phi4-mini-flash"],
     "gpt2_models": ["gpt2", "gpt2-large", "gpt2-xl"],
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
-    "gemma_models": ["gemma3-1B", "gemma2-2B", "gemma3-4B"],
+    "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
     "rtx_3060_safe": [
         "gpt2",
         "gpt2-large",
@@ -217,11 +224,12 @@ PRESET_MODEL_SETS = {
         "Phi4-mini",
         "Llama3.2-1B",
         "Llama3.2-3B",
+        "gemma3-270M",
         "gemma3-1B",
         "gemma2-2B",
         "gemma3-4B",
     ],
-    "small_models": ["gpt2", "Llama3.2-1B", "gemma3-1B"],
+    "small_models": ["gpt2", "Llama3.2-1B", "gemma3-270M", "gemma3-1B"],
     "flash_attention_models": [
         name
         for name, config in MODEL_CONFIGS.items()

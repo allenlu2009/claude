@@ -144,6 +144,26 @@ def get_device_info() -> Dict[str, Any]:
     return device_info
 
 
+def resolve_device(device: str) -> str:
+    """
+    Resolve device string to actual device.
+    
+    Args:
+        device: Device string ('cuda', 'cpu', 'mps', or 'auto')
+        
+    Returns:
+        Resolved device string
+    """
+    if device == "auto":
+        if torch.cuda.is_available():
+            return "cuda"
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            return "mps"
+        else:
+            return "cpu"
+    return device
+
+
 def clear_gpu_memory():
     """Clear GPU memory cache."""
     if torch.cuda.is_available():
@@ -190,9 +210,7 @@ def load_model_and_tokenizer(
     logger.info(f"Device info: {device_info}")
 
     # Determine actual device
-    if device == "auto":
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-
+    device = resolve_device(device)
     logger.info(f"Using device: {device}")
 
     try:
