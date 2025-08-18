@@ -196,6 +196,16 @@ class PerplexityEvaluator:
                     f"Tokens = {num_loss_tokens}"
                 )
 
+            except torch.cuda.OutOfMemoryError as e:
+                logger.error(
+                    f"CUDA out of memory with block_size={chunk_params.block_size}. "
+                    f"Try reducing block size or use --device cpu"
+                )
+                logger.error(f"Memory error details: {str(e)}")
+                raise RuntimeError(
+                    f"Insufficient GPU memory for block_size {chunk_params.block_size}. "
+                    f"Reduce block_size or use --device cpu"
+                )
             except Exception as e:
                 logger.error(f"Chunk {i+1}: Error - {str(e)}")
                 logger.error(f"Input shape: {input_ids.shape}")
