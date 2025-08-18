@@ -6,7 +6,10 @@ perplexity evaluation, with error handling and validation.
 """
 
 import logging
+import os
+import urllib.request
 from typing import Optional, Any
+import requests
 from datasets import load_dataset
 from ..config.model_configs import get_dataset_config, DatasetConfig
 
@@ -71,27 +74,33 @@ def _load_text_from_config(
     logger.info(f"Loading dataset: {config.name}")
 
     try:
-        # Handle different dataset format types
-        if isinstance(config.hf_dataset, tuple):
-            dataset_name, dataset_config = config.hf_dataset
-            dataset = load_dataset(dataset_name, dataset_config, split=config.split)
+        # Use custom loaders for PTB and Shakespeare to avoid HuggingFace issues
+        if config.name == "PTB":
+            text = _load_ptb_text()
+        elif config.name == "Shakespeare":
+            text = _load_shakespeare_text()
         else:
-            dataset = load_dataset(config.hf_dataset, split=config.split)
+            # Handle standard HuggingFace datasets
+            if isinstance(config.hf_dataset, tuple):
+                dataset_name, dataset_config = config.hf_dataset
+                dataset = load_dataset(dataset_name, dataset_config, split=config.split)
+            else:
+                dataset = load_dataset(config.hf_dataset, split=config.split)
 
-        logger.info(f"Dataset loaded successfully. Total samples: {len(dataset)}")
+            logger.info(f"Dataset loaded successfully. Total samples: {len(dataset)}")
 
-        # Handle different sampling strategies
-        if use_all_tokens:
-            logger.info("Using all available tokens from dataset")
-        elif max_samples is not None:
-            dataset = dataset.select(range(min(max_samples, len(dataset))))
-            logger.info(f"Limited to {len(dataset)} samples")
-        elif config.max_samples is not None:
-            dataset = dataset.select(range(min(config.max_samples, len(dataset))))
-            logger.info(f"Limited to {len(dataset)} samples (from config)")
+            # Handle different sampling strategies
+            if use_all_tokens:
+                logger.info("Using all available tokens from dataset")
+            elif max_samples is not None:
+                dataset = dataset.select(range(min(max_samples, len(dataset))))
+                logger.info(f"Limited to {len(dataset)} samples")
+            elif config.max_samples is not None:
+                dataset = dataset.select(range(min(config.max_samples, len(dataset))))
+                logger.info(f"Limited to {len(dataset)} samples (from config)")
 
-        # Extract text based on dataset-specific handling
-        text = _extract_text_from_dataset(dataset, config)
+            # Extract text based on dataset-specific handling
+            text = _extract_text_from_dataset(dataset, config)
         
         # Apply token-based truncation if requested
         if max_tokens is not None:
@@ -103,6 +112,66 @@ def _load_text_from_config(
 
     except Exception as e:
         logger.error(f"Error loading dataset {config.name}: {str(e)}")
+        raise
+
+
+def _load_ptb_text() -> str:
+    """
+    Load PTB test data from GitHub repository.
+    
+    Returns:
+        PTB test text as string
+    """
+    url = "https://raw.githubusercontent.com/tomsercu/lstm/master/data/ptb.test.txt"
+    
+    # Create data directory if it doesn't exist
+    os.makedirs("data", exist_ok=True)
+    ptb_file = "data/ptb_test.txt"
+    
+    # Download if not already present
+    if not os.path.exists(ptb_file):
+        logger.info("Downloading PTB test data...")
+        try:
+            urllib.request.urlretrieve(url, ptb_file)
+            logger.info("PTB test data downloaded successfully!")
+        except Exception as e:
+            logger.error(f"PTB download failed: {e}")
+            logger.info("Falling back to WikiText-2...")
+            # Fallback to WikiText-2
+            from datasets import load_dataset
+            dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+            text = "\n\n".join([item for item in dataset["text"] if item.strip()])
+            return text
+    
+    # Read the file
+    try:
+        with open(ptb_file, "r", encoding='utf-8') as f:
+            text = f.read()
+        logger.info(f"PTB test data loaded from local file: {len(text)} characters")
+        return text
+    except Exception as e:
+        logger.error(f"Failed to read PTB file: {e}")
+        raise
+
+
+def _load_shakespeare_text() -> str:
+    """
+    Load Shakespeare text directly from Karpathy's repository.
+    
+    Returns:
+        Shakespeare text as string
+    """
+    url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+    
+    try:
+        logger.info("Downloading Shakespeare text...")
+        response = requests.get(url)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        text = response.text
+        logger.info(f"Shakespeare text downloaded successfully: {len(text)} characters")
+        return text
+    except Exception as e:
+        logger.error(f"Failed to download Shakespeare text: {e}")
         raise
 
 
