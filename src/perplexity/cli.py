@@ -414,18 +414,20 @@ def print_summary(summary: EvaluationSummary) -> None:
     print(f"Total Time:        {summary.total_time_seconds:.1f}s")
 
     if summary.results:
-        print(
-            f"\n{'Model':<20} {'Dataset':<15} {'Block':<8} {'Stride':<8} {'Perplexity':<12} {'Tokens':<10}"
-        )
-        print("-" * 80)
+        # Print markdown table header
+        print("\n| Model           | Block Size | Stride Ratio | Dataset     | Tokens | Avg. Loss | Perplexity |")
+        print("| --------------- | ---------- | ------------ | ----------- | ------ | --------- | ---------- |")
+        
+        # Print results in markdown table format
         for result in summary.results:
             print(
-                f"{result.model_name:<20} "
-                f"{result.dataset_name:<15} "
-                f"{result.chunk_params.block_size:<8} "
-                f"{result.chunk_params.stride_ratio:<8.2f} "
-                f"{result.perplexity:<12.4f} "
-                f"{result.num_tokens:<10}"
+                f"| {result.model_name:<15} "
+                f"| {result.chunk_params.block_size:<10} "
+                f"| {result.chunk_params.stride_ratio:<12.2f} "
+                f"| {result.dataset_name:<11} "
+                f"| {result.num_tokens:<6} "
+                f"| {result.avg_nll:<9.4f} "
+                f"| {result.perplexity:<10.4f} |"
             )
 
 
