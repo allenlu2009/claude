@@ -414,8 +414,9 @@ def print_summary(summary: EvaluationSummary) -> None:
     print(f"Total Time:        {summary.total_time_seconds:.1f}s")
 
     if summary.results:
-        # Print markdown table header
-        print("\n| Model           | Block Size | Stride Ratio | Dataset     | Tokens | Avg. Loss | Perplexity |")
+        # Print markdown table with proper spacing for Obsidian compatibility
+        print("\n")  # Extra newline before table
+        print("| Model           | Block Size | Stride Ratio | Dataset     | Tokens | Avg. Loss | Perplexity |")
         print("| --------------- | ---------- | ------------ | ----------- | ------ | --------- | ---------- |")
         
         # Print results in markdown table format
@@ -429,6 +430,7 @@ def print_summary(summary: EvaluationSummary) -> None:
                 f"| {result.avg_nll:<9.4f} "
                 f"| {result.perplexity:<10.4f} |"
             )
+        print()  # Extra newline after table for proper separation
 
 
 def main() -> None:
