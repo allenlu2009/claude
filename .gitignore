@@ -77,3 +77,6 @@ tmp/
 *.safetensors
 cache/
 .cache/
+
+# Data
+data/

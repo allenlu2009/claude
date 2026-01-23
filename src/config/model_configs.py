@@ -105,7 +105,7 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
     "gemma3-1B": ModelConfig(
         name="gemma3-1B",
         hf_name="google/gemma-3-1b-it",
-        max_length=131072,
+        max_length=32768,
         memory_gb=2.2,
         supports_flash_attention=True,
     ),
@@ -121,6 +121,20 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         hf_name="google/gemma-3-4b-it",
         max_length=131072,
         memory_gb=8.5,
+        supports_flash_attention=True,
+    ),
+    "Qwen3-0.6B": ModelConfig(
+        name="Qwen3-0.6B",
+        hf_name="Qwen/Qwen3-0.6B",
+        max_length=32768,
+        memory_gb=1.3,
+        supports_flash_attention=True,
+    ),
+    "Qwen3-4B-Instruct": ModelConfig(
+        name="Qwen3-4B-Instruct",
+        hf_name="Qwen/Qwen3-4B-Instruct-2507",
+        max_length=262144,
+        memory_gb=8.8,
         supports_flash_attention=True,
     ),
 }
@@ -216,20 +230,32 @@ PRESET_MODEL_SETS = {
     "gpt2_models": ["gpt2", "gpt2-large", "gpt2-xl"],
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
     "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
+    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct"],
     "rtx_3060_safe": [
         "gpt2",
         "gpt2-large",
         "gpt2-xl",
         "Phi3-mini-4k",
         "Phi4-mini",
+        "Phi4-mini-flash",
         "Llama3.2-1B",
         "Llama3.2-3B",
+        "Qwen2.5-3B",
+        "Qwen3-0.6B",
+        "Qwen3-4B-Instruct",
         "gemma3-270M",
         "gemma3-1B",
         "gemma2-2B",
         "gemma3-4B",
     ],
-    "small_models": ["gpt2", "Llama3.2-1B", "gemma3-270M", "gemma3-1B"],
+    "small_models": [
+        "gpt2",
+        "Llama3.2-1B",
+        "Qwen2.5-3B",
+        "Qwen3-0.6B",
+        "gemma3-270M",
+        "gemma3-1B",
+    ],
     "flash_attention_models": [
         name
         for name, config in MODEL_CONFIGS.items()
