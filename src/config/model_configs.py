@@ -172,6 +172,34 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=234.0,
         supports_flash_attention=True,
     ),
+    "Falcon3-MoE-2x7B-Instruct": ModelConfig(
+        name="Falcon3-MoE-2x7B-Instruct",
+        hf_name="tiiuae/Falcon3-MoE-2x7B-Instruct",
+        max_length=32768,
+        memory_gb=27.0,
+        supports_flash_attention=True,
+    ),
+    "Nemotron-3-Nano-30B-A3B": ModelConfig(
+        name="Nemotron-3-Nano-30B-A3B",
+        hf_name="nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+        max_length=4096,  # Standard for Nemotron-3
+        memory_gb=60.0,
+        supports_flash_attention=True,
+    ),
+    "GLM-4.7-Flash": ModelConfig(
+        name="GLM-4.7-Flash",
+        hf_name="zai-org/GLM-4.7-Flash",
+        max_length=131072,
+        memory_gb=60.0,
+        supports_flash_attention=True,
+    ),
+    "Qwen3-30B-A3B": ModelConfig(
+        name="Qwen3-30B-A3B",
+        hf_name="Qwen/Qwen3-30B-A3B",
+        max_length=32768,
+        memory_gb=61.0,
+        supports_flash_attention=True,
+    ),
 }
 
 
@@ -271,6 +299,10 @@ PRESET_MODEL_SETS = {
         "DeepSeek-V2-Lite-Instruct",
         "Qwen2-57B-A14B-Instruct",
         "gpt-oss-20b",
+        "Falcon3-MoE-2x7B-Instruct",
+        "Nemotron-3-Nano-30B-A3B",
+        "GLM-4.7-Flash",
+        "Qwen3-30B-A3B",
     ],
     "large_moe_models": ["gpt-oss-120b"],
     "rtx_3060_safe": [
