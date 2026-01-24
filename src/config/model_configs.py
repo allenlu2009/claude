@@ -137,6 +137,41 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=8.8,
         supports_flash_attention=True,
     ),
+    "Mixtral-8x7B-v0.1": ModelConfig(
+        name="Mixtral-8x7B-v0.1",
+        hf_name="mistralai/Mixtral-8x7B-v0.1",
+        max_length=32768,
+        memory_gb=90.0,
+        supports_flash_attention=True,
+    ),
+    "DeepSeek-V2-Lite-Instruct": ModelConfig(
+        name="DeepSeek-V2-Lite-Instruct",
+        hf_name="deepseek-ai/DeepSeek-V2-Lite-Instruct",
+        max_length=163840,
+        memory_gb=32.0,
+        supports_flash_attention=True,
+    ),
+    "Qwen2-57B-A14B-Instruct": ModelConfig(
+        name="Qwen2-57B-A14B-Instruct",
+        hf_name="Qwen/Qwen2-57B-A14B-Instruct",
+        max_length=32768,
+        memory_gb=114.0,
+        supports_flash_attention=True,
+    ),
+    "gpt-oss-20b": ModelConfig(
+        name="gpt-oss-20b",
+        hf_name="openai/gpt-oss-20b",
+        max_length=131072,
+        memory_gb=42.0,
+        supports_flash_attention=True,
+    ),
+    "gpt-oss-120b": ModelConfig(
+        name="gpt-oss-120b",
+        hf_name="openai/gpt-oss-120b",
+        max_length=131072,
+        memory_gb=234.0,
+        supports_flash_attention=True,
+    ),
 }
 
 
@@ -231,6 +266,13 @@ PRESET_MODEL_SETS = {
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
     "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
     "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct"],
+    "moe_models": [
+        "Mixtral-8x7B-v0.1",
+        "DeepSeek-V2-Lite-Instruct",
+        "Qwen2-57B-A14B-Instruct",
+        "gpt-oss-20b",
+    ],
+    "large_moe_models": ["gpt-oss-120b"],
     "rtx_3060_safe": [
         "gpt2",
         "gpt2-large",

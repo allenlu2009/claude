@@ -28,8 +28,8 @@ class ModelConfig(BaseModel):
     @field_validator("memory_gb")
     @classmethod
     def validate_memory_gb(cls, v: float) -> float:
-        if v > 24:  # Reasonable upper bound for consumer GPUs
-            raise ValueError("Memory requirement too high for consumer GPUs")
+        if v > 512:  # Support very large models for high-memory environments
+            raise ValueError("Memory requirement too high (max 512GB)")
         return v
 
 
