@@ -271,7 +271,7 @@ def _load_model_with_attention_fallback(
     # Base configuration
     base_config = {
         "trust_remote_code": True,
-        "torch_dtype": "auto",
+        "dtype": "auto",
     }
 
     # Add device mapping for GPU
