@@ -123,6 +123,13 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=8.5,
         supports_flash_attention=True,
     ),
+    "Qwen3-32B": ModelConfig(
+        name="Qwen3-32B",
+        hf_name="Qwen/Qwen3-32B", # Base model (Instruct is gated)
+        max_length=32768,
+        memory_gb=64.0,
+        supports_flash_attention=True,
+    ),
     "Qwen2.5-32B": ModelConfig(
         name="Qwen2.5-32B",
         hf_name="Qwen/Qwen2.5-32B-Instruct",
@@ -300,7 +307,7 @@ PRESET_MODEL_SETS = {
     "gpt2_models": ["gpt2", "gpt2-large", "gpt2-xl"],
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
     "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
-    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B"],
+    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B", "Qwen3-32B"],
     "moe_models": [
         "Mixtral-8x7B-v0.1",
         "DeepSeek-V2-Lite-Instruct",
