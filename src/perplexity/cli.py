@@ -373,6 +373,11 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                         f"tokens={result.num_tokens}"
                     )
 
+                    # Incremental save to prevent data loss in long runs
+                    if config.output_file:
+                        current_summary = EvaluationSummary.from_results(all_results, time.time() - start_time)
+                        save_results(current_summary, config.output_file)
+
             # Clean up model to free memory
             unload_model(model)
 
