@@ -421,18 +421,27 @@ def print_summary(summary: EvaluationSummary) -> None:
     if summary.results:
         # Print markdown table with proper spacing for Obsidian compatibility
         print("\n")  # Extra newline before table
-        print("| Model           | Block Size | Stride Ratio | Dataset     | Tokens | Avg. Loss | Perplexity |")
-        print("| --------------- | ---------- | ------------ | ----------- | ------ | --------- | ---------- |")
+        print("| Model           | Dataset     | Tokens | Avg Power(W) (Avg/Peak) | GPU Util % (Avg/Peak) | GPU Mem(GB) (Avg/Peak) | Perplexity |")
+        print("| --------------- | ----------- | ------ | ----------------------- | --------------------- | ---------------------- | ---------- |")
         
         # Print results in markdown table format
         for result in summary.results:
+            def fmt_stat(avg, max_val, scale=1.0):
+                if avg is None or max_val is None:
+                    return "N/A"
+                return f"{avg/scale:.1f}/{max_val/scale:.1f}"
+
+            power_fmt = fmt_stat(result.avg_power_draw_mw, result.max_power_draw_mw, 1000.0)
+            util_fmt = fmt_stat(result.avg_gpu_utilization, result.max_gpu_utilization)
+            mem_fmt = fmt_stat(result.avg_memory_used_system_mb, result.max_memory_used_system_mb, 1024.0)
+            
             print(
                 f"| {result.model_name:<15} "
-                f"| {result.chunk_params.block_size:<10} "
-                f"| {result.chunk_params.stride_ratio:<12.2f} "
                 f"| {result.dataset_name:<11} "
                 f"| {result.num_tokens:<6} "
-                f"| {result.avg_nll:<9.4f} "
+                f"| {power_fmt:<23} "
+                f"| {util_fmt:<21} "
+                f"| {mem_fmt:<22} "
                 f"| {result.perplexity:<10.4f} |"
             )
         print()  # Extra newline after table for proper separation

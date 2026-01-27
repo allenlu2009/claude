@@ -16,6 +16,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from .models import ChunkParams, EvaluationResult
 from .model_loader import get_memory_usage
+from .monitoring import HardwareMonitor
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -144,6 +145,10 @@ class PerplexityEvaluator:
         start_time = time.time()
         initial_memory = get_memory_usage()
 
+        # Initialize and start hardware monitor
+        hw_monitor = HardwareMonitor()
+        hw_monitor.start()
+
         nll_sum = 0.0
         n_tokens = 0
         losses = []
@@ -211,6 +216,9 @@ class PerplexityEvaluator:
                 logger.error(f"Input shape: {input_ids.shape}")
                 continue
 
+        # Stop hardware monitor and collect stats
+        hw_stats = hw_monitor.stop()
+
         # Calculate final metrics
         avg_nll = nll_sum / n_tokens if n_tokens > 0 else float("inf")
 
@@ -244,6 +252,17 @@ class PerplexityEvaluator:
             num_tokens=n_tokens,
             memory_used_mb=memory_used_mb,
             evaluation_time_seconds=evaluation_time,
+            avg_power_draw_mw=hw_stats.get("avg_power_draw_mw"),
+            max_power_draw_mw=hw_stats.get("max_power_draw_mw"),
+            avg_gpu_utilization=hw_stats.get("avg_gpu_utilization"),
+            max_gpu_utilization=hw_stats.get("max_gpu_utilization"),
+            avg_memory_allocated_mb=hw_stats.get("avg_memory_allocated_mb"),
+            max_memory_allocated_mb=hw_stats.get("max_memory_allocated_mb"),
+            avg_memory_reserved_mb=hw_stats.get("avg_memory_reserved_mb"),
+            max_memory_reserved_mb=hw_stats.get("max_memory_reserved_mb"),
+            avg_memory_used_system_mb=hw_stats.get("avg_memory_used_system_mb"),
+            max_memory_used_system_mb=hw_stats.get("max_memory_used_system_mb"),
+            num_hw_samples=hw_stats.get("num_hw_samples", 0),
         )
 
     def evaluate_text(
