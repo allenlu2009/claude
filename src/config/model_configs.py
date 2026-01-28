@@ -242,6 +242,20 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=5.0,
         supports_flash_attention=True,
     ),
+    "Qwen3-8B": ModelConfig(
+        name="Qwen3-8B",
+        hf_name="Qwen/Qwen3-8B",
+        max_length=32768,
+        memory_gb=17.5,
+        supports_flash_attention=True,
+    ),
+    "Qwen3-8B-Instruct": ModelConfig(
+        name="Qwen3-8B-Instruct",
+        hf_name="Qwen/Qwen3-8B-Instruct",
+        max_length=32768,
+        memory_gb=17.5,
+        supports_flash_attention=True,
+    ),
 }
 
 
@@ -335,7 +349,7 @@ PRESET_MODEL_SETS = {
     "gpt2_models": ["gpt2", "gpt2-large", "gpt2-xl"],
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
     "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
-    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B", "Qwen3-32B"],
+    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B", "Qwen3-32B", "Qwen3-8B", "Qwen3-8B-Instruct"],
     "fp8_models": ["Qwen3-8B-FP8", "Qwen3-32B-FP8", "Qwen3-30B-A3B-FP8", "Qwen3-4B-FP8"],
     "moe_models": [
         "Mixtral-8x7B-v0.1",
