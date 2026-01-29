@@ -180,10 +180,10 @@ class EvaluationSummary(BaseModel):
 
         return cls(
             results=results,
-            total_time_seconds=total_time,
+            total_time_seconds=float(round(total_time)),
             total_models=unique_models,
             total_datasets=unique_datasets,
             successful_evaluations=successful,
             failed_evaluations=0,  # Will be updated by caller if needed
-            average_perplexity=avg_ppl,
+            average_perplexity=round(avg_ppl, 4),
         )
