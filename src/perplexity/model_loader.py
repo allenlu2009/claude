@@ -165,9 +165,15 @@ def resolve_device(device: str) -> str:
 
 
 def clear_gpu_memory():
-    """Clear GPU memory cache."""
+    """Clear GPU memory cache, trigger garbage collection and IPC collect."""
+    import gc
+    gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+        try:
+            torch.cuda.ipc_collect()
+        except Exception:
+            pass
         logger.info("GPU memory cache cleared")
 
 
@@ -272,6 +278,7 @@ def _load_model_with_attention_fallback(
     base_config = {
         "trust_remote_code": True,
         "dtype": "auto",
+        "low_cpu_mem_usage": True,
     }
 
     # Add device mapping for GPU
@@ -318,19 +325,29 @@ def _load_model_with_attention_fallback(
         raise
 
 
-def unload_model(model: AutoModelForCausalLM) -> None:
+def unload_model(model: Any, tokenizer: Optional[Any] = None) -> None:
     """
-    Properly unload model and clear memory.
+    Properly unload model and tokenizer to free memory.
 
     Args:
         model: Model to unload
+        tokenizer: Optional tokenizer to unload
     """
     logger.info("Unloading model and clearing memory")
 
-    # Delete model
+    # Move model to CPU to ensure GPU tensors are flagged for collection
+    try:
+        if hasattr(model, "to"):
+            model.to("cpu")
+    except Exception as e:
+        logger.debug(f"Error moving model to CPU during unload: {e}")
+
+    # Delete references
+    if tokenizer is not None:
+        del tokenizer
     del model
 
-    # Clear GPU cache
+    # Clear memory
     clear_gpu_memory()
 
     logger.info("Model unloaded successfully")

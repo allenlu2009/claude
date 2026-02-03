@@ -10,6 +10,7 @@ import json
 import logging
 import sys
 import time
+import torch
 from typing import List
 
 from .models import ChunkParams, PerplexityConfig, EvaluationSummary
@@ -379,7 +380,17 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                         save_results(current_summary, config.output_file)
 
             # Clean up model to free memory
-            unload_model(model)
+            unload_model(model, tokenizer)
+            
+            # Explicitly delete references in this scope
+            del model
+            del tokenizer
+            
+            # Final sweep
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
         except Exception as e:
             logger.error(f"Error evaluating model {model_name}: {e}")
