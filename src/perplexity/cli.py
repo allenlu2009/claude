@@ -378,6 +378,9 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                     if config.output_file:
                         current_summary = EvaluationSummary.from_results(all_results, time.time() - start_time)
                         save_results(current_summary, config.output_file)
+                
+                # Delete text after each dataset to free major RAM
+                del text
 
             # Clean up model to free memory
             unload_model(model, tokenizer)
@@ -385,12 +388,22 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
             # Explicitly delete references in this scope
             del model
             del tokenizer
+            del adjusted_chunk_params
             
             # Final sweep
             import gc
             gc.collect()
             if torch.cuda.is_available():
+                torch.cuda.synchronize()
                 torch.cuda.empty_cache()
+                try:
+                    torch.cuda.ipc_collect()
+                except Exception:
+                    pass
+            
+            # Give the system (especially unified memory like GB10) a moment to rebalance
+            logger.info("Waiting 2s for memory rebalance...")
+            time.sleep(2)
 
         except Exception as e:
             logger.error(f"Error evaluating model {model_name}: {e}")

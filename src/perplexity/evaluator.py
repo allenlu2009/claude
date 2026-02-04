@@ -191,7 +191,7 @@ class PerplexityEvaluator:
                 )  # Subtract special tokens
 
                 if num_loss_tokens > 0:
-                    nll_sum += neg_log_likelihood * num_loss_tokens
+                    nll_sum += neg_log_likelihood.item() * num_loss_tokens
                     n_tokens += num_loss_tokens
 
                 losses.append(neg_log_likelihood.item())
@@ -200,6 +200,12 @@ class PerplexityEvaluator:
                     f"Chunk {i+1}: Loss = {neg_log_likelihood.item():.4f}, "
                     f"Tokens = {num_loss_tokens}"
                 )
+                
+                # Explicitly delete GPU tensors at end of iteration
+                del input_ids
+                del target_ids
+                del outputs
+                del neg_log_likelihood
 
             except torch.cuda.OutOfMemoryError as e:
                 logger.error(
