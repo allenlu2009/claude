@@ -169,12 +169,13 @@ def clear_gpu_memory():
     import gc
     gc.collect()
     if torch.cuda.is_available():
+        torch.cuda.synchronize()
         torch.cuda.empty_cache()
         try:
             torch.cuda.ipc_collect()
         except Exception:
             pass
-        logger.info("GPU memory cache cleared")
+        logger.info("GPU memory cache cleared and synchronized")
 
 
 def load_model_and_tokenizer(
@@ -335,12 +336,9 @@ def unload_model(model: Any, tokenizer: Optional[Any] = None) -> None:
     """
     logger.info("Unloading model and clearing memory")
 
-    # Move model to CPU to ensure GPU tensors are flagged for collection
-    try:
-        if hasattr(model, "to"):
-            model.to("cpu")
-    except Exception as e:
-        logger.debug(f"Error moving model to CPU during unload: {e}")
+    # Clear model from GPU if possible without moving it to CPU
+    # Just deleting references and clearing cache is safer for large models
+    pass
 
     # Delete references
     if tokenizer is not None:

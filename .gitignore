@@ -80,3 +80,9 @@ cache/
 
 # Data
 data/
+
+hw*.json
+debug*.json
+
+# Gemini memory
+.agent/

@@ -382,7 +382,7 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
                 # Delete text after each dataset to free major RAM
                 del text
 
-            # Clean up model to free memory
+            # Clean up model and references to free memory
             unload_model(model, tokenizer)
             
             # Explicitly delete references in this scope
@@ -390,16 +390,9 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
             del tokenizer
             del adjusted_chunk_params
             
-            # Final sweep
+            # Final sweep of any remaining Python objects
             import gc
             gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-                torch.cuda.empty_cache()
-                try:
-                    torch.cuda.ipc_collect()
-                except Exception:
-                    pass
             
             # Give the system (especially unified memory like GB10) a moment to rebalance
             logger.info("Waiting 2s for memory rebalance...")
