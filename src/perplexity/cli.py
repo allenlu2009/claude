@@ -47,6 +47,7 @@ def setup_logging(verbose: bool = False) -> None:
     # Set specific loggers
     logging.getLogger("transformers").setLevel(logging.WARNING)
     logging.getLogger("datasets").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def create_parser() -> argparse.ArgumentParser:

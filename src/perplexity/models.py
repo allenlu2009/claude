@@ -24,6 +24,9 @@ class ModelConfig(BaseModel):
     supports_flash_attention: bool = Field(
         default=True, description="Whether model supports flash attention"
     )
+    model_type: str = Field(
+        default="causal", description="Type of model (causal, vision, etc.)"
+    )
 
     @field_validator("memory_gb")
     @classmethod

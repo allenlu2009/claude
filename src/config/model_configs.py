@@ -80,6 +80,7 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         max_length=4096,
         memory_gb=14.0,  # Larger due to vision components
         supports_flash_attention=True,
+        model_type="vision",
     ),
     "gemma-7B": ModelConfig(
         name="gemma-7B",
@@ -277,6 +278,30 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=18.5,
         supports_flash_attention=True,
     ),
+    "Qwen3-VL-4B-Instruct": ModelConfig(
+        name="Qwen3-VL-4B-Instruct",
+        hf_name="Qwen/Qwen3-VL-4B-Instruct",
+        max_length=262144,
+        memory_gb=11.0,
+        supports_flash_attention=True,
+        model_type="vision",
+    ),
+    "Qwen3-VL-4B-Instruct-FP8": ModelConfig(
+        name="Qwen3-VL-4B-Instruct-FP8",
+        hf_name="Qwen/Qwen3-VL-4B-Instruct-FP8",
+        max_length=262144,
+        memory_gb=6.5,
+        supports_flash_attention=True,
+        model_type="vision",
+    ),
+    "Qwen3-VL-4B-Instruct-GGUF": ModelConfig(
+        name="Qwen3-VL-4B-Instruct-GGUF",
+        hf_name="Qwen/Qwen3-VL-4B-Instruct-GGUF",
+        max_length=262144,
+        memory_gb=5.0,
+        supports_flash_attention=True,
+        model_type="vision",
+    ),
 }
 
 
@@ -371,7 +396,8 @@ PRESET_MODEL_SETS = {
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
     "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
     "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B", "Qwen3-32B", "Qwen3-8B", "Qwen3-8B-Instruct"],
-    "fp8_models": ["Qwen3-8B-FP8", "Qwen3-32B-FP8", "Qwen3-30B-A3B-FP8", "Qwen3-4B-FP8", "Qwen3-4B-Instruct-FP8", "GLM-4.7-Flash-FP8", "GLM-4.7-Flash"],
+    "qwen3_vl_models": ["Qwen2-VL-7B", "Qwen3-VL-4B-Instruct", "Qwen3-VL-4B-Instruct-FP8", "Qwen3-VL-4B-Instruct-GGUF"],
+    "fp8_models": ["Qwen3-8B-FP8", "Qwen3-32B-FP8", "Qwen3-30B-A3B-FP8", "Qwen3-4B-FP8", "Qwen3-4B-Instruct-FP8", "GLM-4.7-Flash-FP8", "GLM-4.7-Flash", "Qwen3-VL-4B-Instruct-FP8"],
     "glm_models": ["GLM-4-9B", "GLM-4.7-Flash", "GLM-4.7-Flash-FP8"],
     "moe_models": [
         "Mixtral-8x7B-v0.1",
@@ -398,6 +424,9 @@ PRESET_MODEL_SETS = {
         "Qwen3-0.6B",
         "Qwen3-4B-Instruct",
         "Qwen3-4B-Instruct-FP8",
+        "Qwen3-VL-4B-Instruct",
+        "Qwen3-VL-4B-Instruct-FP8",
+        "Qwen3-VL-4B-Instruct-GGUF",
         "gemma3-270M",
         "gemma3-1B",
         "gemma2-2B",

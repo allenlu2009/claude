@@ -8,7 +8,7 @@ automatic memory optimization and flash attention fallback strategies.
 import logging
 import torch
 from typing import Tuple, Optional, Dict, Any
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoConfig  # type: ignore
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForVision2Seq, AutoConfig  # type: ignore
 from ..config.model_configs import get_model_config, ModelConfig
 
 # Set up logging
@@ -261,7 +261,7 @@ def _load_tokenizer(hf_name: str) -> AutoTokenizer:
 
 def _load_model_with_attention_fallback(
     model_config: ModelConfig, device: str, use_flash_attention: bool
-) -> AutoModelForCausalLM:
+) -> Any:
     """
     Load model with flash attention, falling back to eager if needed.
 
@@ -274,6 +274,14 @@ def _load_model_with_attention_fallback(
         Loaded model
     """
     hf_name = model_config.hf_name
+    
+    # Determine which model class to use
+    if model_config.model_type == "vision":
+        model_class = AutoModelForVision2Seq
+        logger.info(f"Using AutoModelForVision2Seq for model type: {model_config.model_type}")
+    else:
+        model_class = AutoModelForCausalLM
+        logger.info(f"Using AutoModelForCausalLM for model type: {model_config.model_type}")
 
     # Base configuration
     base_config = {
@@ -292,7 +300,7 @@ def _load_model_with_attention_fallback(
             logger.info("Attempting to load with flash attention")
             flash_config = {**base_config, "attn_implementation": "flash_attention_2"}
 
-            model = AutoModelForCausalLM.from_pretrained(hf_name, **flash_config)  # type: ignore
+            model = model_class.from_pretrained(hf_name, **flash_config)  # type: ignore
 
             # Enable gradient checkpointing for memory efficiency
             if hasattr(model, "gradient_checkpointing_enable"):
@@ -311,7 +319,7 @@ def _load_model_with_attention_fallback(
         logger.info("Loading with eager attention")
         eager_config = {**base_config, "attn_implementation": "eager"}
 
-        model = AutoModelForCausalLM.from_pretrained(hf_name, **eager_config)  # type: ignore
+        model = model_class.from_pretrained(hf_name, **eager_config)  # type: ignore
 
         # Enable gradient checkpointing for memory efficiency
         if hasattr(model, "gradient_checkpointing_enable"):
