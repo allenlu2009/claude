@@ -294,18 +294,20 @@ def _load_model_with_attention_fallback(
     
     # Add GGUF support if specified
     if model_config.gguf_file:
-        logger.info(f"Downloading/Resolving GGUF file: {model_config.gguf_file} from {hf_name}")
-        try:
-            gguf_path = hf_hub_download(repo_id=hf_name, filename=model_config.gguf_file)
-            base_config["gguf_file"] = gguf_path
-            
-            # If a separate tokenizer/config repo is specified, use it for base configuration
-            if model_config.tokenizer_name:
-                hf_name = model_config.tokenizer_name
-                logger.info(f"Using {hf_name} as base repository for GGUF model")
-        except Exception as e:
-            logger.error(f"Failed to resolve GGUF file: {str(e)}")
-            raise
+        logger.info(f"Preparing to load GGUF model: {model_config.gguf_file} from {hf_name}")
+        base_config["gguf_file"] = model_config.gguf_file
+        
+        # If a separate tokenizer/config repo is specified, load its config first
+        if model_config.tokenizer_name:
+            logger.info(f"Loading base configuration from {model_config.tokenizer_name}")
+            try:
+                # Get the configuration from the base repo
+                config_obj = AutoConfig.from_pretrained(model_config.tokenizer_name, trust_remote_code=True)
+                base_config["config"] = config_obj
+                logger.info("Base configuration loaded successfully")
+            except Exception as e:
+                logger.error(f"Failed to load base configuration: {str(e)}")
+                raise
 
     # Add device mapping for GPU
     if device == "cuda":

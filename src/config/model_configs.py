@@ -304,6 +304,24 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         gguf_file="Qwen3VL-4B-Instruct-Q4_K_M.gguf",
         tokenizer_name="Qwen/Qwen3-VL-4B-Instruct",
     ),
+    "Qwen3-4B-Instruct-GGUF": ModelConfig(
+        name="Qwen3-4B-Instruct-GGUF",
+        hf_name="unsloth/Qwen3-4B-Instruct-2507-GGUF",
+        max_length=262144,
+        memory_gb=5.0,
+        supports_flash_attention=True,
+        gguf_file="Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+        tokenizer_name="Qwen/Qwen3-4B-Instruct-2507",
+    ),
+    "Qwen2.5-0.5B-GGUF": ModelConfig(
+        name="Qwen2.5-0.5B-GGUF",
+        hf_name="Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+        max_length=32768,
+        memory_gb=1.0,
+        supports_flash_attention=True,
+        gguf_file="qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        tokenizer_name="Qwen/Qwen2.5-0.5B-Instruct",
+    ),
 }
 
 
@@ -397,7 +415,7 @@ PRESET_MODEL_SETS = {
     "gpt2_models": ["gpt2", "gpt2-large", "gpt2-xl"],
     "llama_models": ["Llama3.2-1B", "Llama3.2-3B"],
     "gemma_models": ["gemma3-270M", "gemma3-1B", "gemma2-2B", "gemma3-4B"],
-    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B", "Qwen3-32B", "Qwen3-8B", "Qwen3-8B-Instruct"],
+    "qwen3_models": ["Qwen3-0.6B", "Qwen3-4B-Instruct", "Qwen2.5-32B", "Qwen3-32B", "Qwen3-8B", "Qwen3-8B-Instruct", "Qwen3-4B-Instruct-GGUF"],
     "qwen3_vl_models": ["Qwen2-VL-7B", "Qwen3-VL-4B-Instruct", "Qwen3-VL-4B-Instruct-FP8", "Qwen3-VL-4B-Instruct-GGUF"],
     "fp8_models": ["Qwen3-8B-FP8", "Qwen3-32B-FP8", "Qwen3-30B-A3B-FP8", "Qwen3-4B-FP8", "Qwen3-4B-Instruct-FP8", "GLM-4.7-Flash-FP8", "GLM-4.7-Flash", "Qwen3-VL-4B-Instruct-FP8"],
     "glm_models": ["GLM-4-9B", "GLM-4.7-Flash", "GLM-4.7-Flash-FP8"],
@@ -429,6 +447,7 @@ PRESET_MODEL_SETS = {
         "Qwen3-VL-4B-Instruct",
         "Qwen3-VL-4B-Instruct-FP8",
         "Qwen3-VL-4B-Instruct-GGUF",
+        "Qwen3-4B-Instruct-GGUF",
         "gemma3-270M",
         "gemma3-1B",
         "gemma2-2B",
