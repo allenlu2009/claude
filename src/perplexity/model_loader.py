@@ -8,7 +8,7 @@ automatic memory optimization and flash attention fallback strategies.
 import logging
 import torch
 from typing import Tuple, Optional, Dict, Any
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForVision2Seq, AutoConfig  # type: ignore
+from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForImageTextToText, AutoConfig, BitsAndBytesConfig  # type: ignore
 from huggingface_hub import hf_hub_download
 from ..config.model_configs import get_model_config, ModelConfig
 
@@ -279,8 +279,8 @@ def _load_model_with_attention_fallback(
     
     # Determine which model class to use
     if model_config.model_type == "vision":
-        model_class = AutoModelForVision2Seq
-        logger.info(f"Using AutoModelForVision2Seq for model type: {model_config.model_type}")
+        model_class = AutoModelForImageTextToText
+        logger.info(f"Using AutoModelForImageTextToText for model type: {model_config.model_type}")
     else:
         model_class = AutoModelForCausalLM
         logger.info(f"Using AutoModelForCausalLM for model type: {model_config.model_type}")
@@ -309,9 +309,26 @@ def _load_model_with_attention_fallback(
                 logger.error(f"Failed to load base configuration: {str(e)}")
                 raise
 
+    # Add bitsandbytes quantization support
+    if model_config.load_in_4bit:
+        logger.info("Enabling 4-bit quantization (BitsAndBytesConfig)")
+        base_config["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+    elif model_config.load_in_8bit:
+        logger.info("Enabling 8-bit quantization (BitsAndBytesConfig)")
+        base_config["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+
     # Add device mapping for GPU
     if device == "cuda":
-        base_config["device_map"] = "cuda"
+        # bitsandbytes recommendeds device_map="auto" for proper quantization loading
+        if model_config.load_in_4bit or model_config.load_in_8bit:
+            base_config["device_map"] = "auto"
+        else:
+            base_config["device_map"] = "cuda"
 
     # Try flash attention first if supported and requested
     if use_flash_attention and model_config.supports_flash_attention:

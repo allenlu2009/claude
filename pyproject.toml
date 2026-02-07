@@ -1,5 +1,50 @@
+[project]
+name = "perplexity-eval"
+version = "0.1.0"
+description = "Perplexity evaluation system for LLMs on NVIDIA GPU containers"
+requires-python = ">=3.12"
+
+# These are the packages installed ON TOP of the NVIDIA PyTorch container
+# (nvcr.io/nvidia/pytorch:25.11-py3), which already provides:
+#   torch, torchvision, flash_attn, numpy, etc.
+
+dependencies = [
+    "transformers>=5.0.0",
+    "datasets>=4.0.0",
+    "accelerate>=1.12.0",
+    "gguf>=0.10.0",
+    "huggingface_hub>=1.0.0",
+    "pydantic>=2.5.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.66.0",
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=25.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+# These packages are provided by the NVIDIA PyTorch container
+# (nvcr.io/nvidia/pytorch:25.11-py3) and must NOT be resolved or installed by uv.
+# The container ships optimized builds for NVIDIA GB10 (Spark).
+# The venv uses --system-site-packages to inherit them.
+exclude-dependencies = ["torch", "torchvision", "numpy"]
+
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -16,8 +61,10 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "datasets.*",
-    "transformers.*", 
+    "transformers.*",
     "torch.*",
-    "tqdm.*"
+    "tqdm.*",
+    "gguf.*",
+    "accelerate.*",
 ]
 ignore_missing_imports = true

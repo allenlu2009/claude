@@ -86,3 +86,9 @@ debug*.json
 
 # Gemini memory
 .agent/
+
+# Results and logs
+results_*.json
+*.log
+debug_*.log
+*.o

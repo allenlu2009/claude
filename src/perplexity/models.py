@@ -33,6 +33,12 @@ class ModelConfig(BaseModel):
     tokenizer_name: Optional[str] = Field(
         default=None, description="Alternate HF repository for tokenizer"
     )
+    load_in_4bit: bool = Field(
+        default=False, description="Load model in 4-bit using bitsandbytes"
+    )
+    load_in_8bit: bool = Field(
+        default=False, description="Load model in 8-bit using bitsandbytes"
+    )
 
     @field_validator("memory_gb")
     @classmethod
