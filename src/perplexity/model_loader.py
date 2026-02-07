@@ -9,6 +9,7 @@ import logging
 import torch
 from typing import Tuple, Optional, Dict, Any
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForVision2Seq, AutoConfig  # type: ignore
+from huggingface_hub import hf_hub_download
 from ..config.model_configs import get_model_config, ModelConfig
 
 # Set up logging
@@ -222,7 +223,8 @@ def load_model_and_tokenizer(
 
     try:
         # Load tokenizer first
-        tokenizer = _load_tokenizer(model_config.hf_name)
+        tokenizer_id = model_config.tokenizer_name or model_config.hf_name
+        tokenizer = _load_tokenizer(tokenizer_id)
 
         # Load model with appropriate attention implementation
         model = _load_model_with_attention_fallback(
@@ -289,6 +291,21 @@ def _load_model_with_attention_fallback(
         "dtype": "auto",
         "low_cpu_mem_usage": True,
     }
+    
+    # Add GGUF support if specified
+    if model_config.gguf_file:
+        logger.info(f"Downloading/Resolving GGUF file: {model_config.gguf_file} from {hf_name}")
+        try:
+            gguf_path = hf_hub_download(repo_id=hf_name, filename=model_config.gguf_file)
+            base_config["gguf_file"] = gguf_path
+            
+            # If a separate tokenizer/config repo is specified, use it for base configuration
+            if model_config.tokenizer_name:
+                hf_name = model_config.tokenizer_name
+                logger.info(f"Using {hf_name} as base repository for GGUF model")
+        except Exception as e:
+            logger.error(f"Failed to resolve GGUF file: {str(e)}")
+            raise
 
     # Add device mapping for GPU
     if device == "cuda":

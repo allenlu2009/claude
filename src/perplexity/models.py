@@ -27,6 +27,12 @@ class ModelConfig(BaseModel):
     model_type: str = Field(
         default="causal", description="Type of model (causal, vision, etc.)"
     )
+    gguf_file: Optional[str] = Field(
+        default=None, description="Filename of GGUF file in the repository"
+    )
+    tokenizer_name: Optional[str] = Field(
+        default=None, description="Alternate HF repository for tokenizer"
+    )
 
     @field_validator("memory_gb")
     @classmethod

@@ -48,6 +48,7 @@ def setup_logging(verbose: bool = False) -> None:
     logging.getLogger("transformers").setLevel(logging.WARNING)
     logging.getLogger("datasets").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -318,7 +319,8 @@ def run_evaluation(args: argparse.Namespace) -> EvaluationSummary:
             )
 
             # Get model's actual max length and validate block sizes
-            actual_max_length = get_model_max_length(model_config.hf_name, model_name)
+            config_id = model_config.tokenizer_name or model_config.hf_name
+            actual_max_length = get_model_max_length(config_id, model_name)
             
             # Validate and adjust chunk parameters for this model
             adjusted_chunk_params = []

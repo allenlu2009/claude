@@ -301,6 +301,8 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
         memory_gb=5.0,
         supports_flash_attention=True,
         model_type="vision",
+        gguf_file="Qwen3VL-4B-Instruct-Q4_K_M.gguf",
+        tokenizer_name="Qwen/Qwen3-VL-4B-Instruct",
     ),
 }
 
