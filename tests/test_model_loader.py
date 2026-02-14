@@ -212,10 +212,9 @@ class TestModelLoading:
         )
         
         result = _load_model_with_attention_fallback(model_config, "cuda", True)
-        
+
         assert result is mock_model
-        mock_model.gradient_checkpointing_enable.assert_called_once()
-        
+
         # Should have tried flash attention first
         call_args = mock_model_load.call_args[1]
         assert call_args['attn_implementation'] == 'flash_attention_2'
@@ -402,6 +401,151 @@ class TestErrorHandling:
         
         with pytest.raises(Exception):
             _load_model_with_attention_fallback(model_config, "cuda", True)
+
+
+class TestPostLoadMemoryValidation:
+    """Test post-load VRAM validation."""
+
+    @patch('src.perplexity.model_loader.get_model_config')
+    @patch('src.perplexity.model_loader._load_tokenizer')
+    @patch('src.perplexity.model_loader._load_model_with_attention_fallback')
+    @patch('src.perplexity.model_loader.unload_model')
+    def test_post_load_memory_exceeds_limit(self, mock_unload, mock_load_model, mock_load_tokenizer, mock_get_config, mock_cuda_available, monkeypatch):
+        """Test that model is unloaded if actual VRAM exceeds limit."""
+        mock_config = ModelConfig(
+            name="test-model",
+            hf_name="test/model",
+            max_length=2048,
+            memory_gb=4.0,
+            supports_flash_attention=True
+        )
+        mock_get_config.return_value = mock_config
+
+        mock_tokenizer = Mock()
+        mock_tokenizer.pad_token = "[PAD]"
+        mock_load_tokenizer.return_value = mock_tokenizer
+
+        mock_model = Mock()
+        mock_model.eval = Mock()
+        mock_load_model.return_value = mock_model
+
+        # Actual VRAM usage is 13GB (exceeds 12GB limit)
+        monkeypatch.setattr(torch.cuda, "memory_allocated", lambda: 13 * 1024**3)
+
+        with pytest.raises(MemoryConstraintError, match="actual VRAM usage"):
+            load_model_and_tokenizer("test-model", device="cuda", memory_limit_gb=12.0)
+
+        mock_unload.assert_called_once()
+
+    @patch('src.perplexity.model_loader.get_model_config')
+    @patch('src.perplexity.model_loader._load_tokenizer')
+    @patch('src.perplexity.model_loader._load_model_with_attention_fallback')
+    def test_post_load_memory_within_limit(self, mock_load_model, mock_load_tokenizer, mock_get_config, mock_cuda_available, monkeypatch):
+        """Test that model loads successfully when VRAM is within limit."""
+        mock_config = ModelConfig(
+            name="test-model",
+            hf_name="test/model",
+            max_length=2048,
+            memory_gb=4.0,
+            supports_flash_attention=True
+        )
+        mock_get_config.return_value = mock_config
+
+        mock_tokenizer = Mock()
+        mock_tokenizer.pad_token = "[PAD]"
+        mock_load_tokenizer.return_value = mock_tokenizer
+
+        mock_model = Mock()
+        mock_model.eval = Mock()
+        mock_load_model.return_value = mock_model
+
+        # Actual VRAM usage is 4GB (within 12GB limit)
+        monkeypatch.setattr(torch.cuda, "memory_allocated", lambda: 4 * 1024**3)
+
+        model, tokenizer = load_model_and_tokenizer("test-model", device="cuda", memory_limit_gb=12.0)
+        assert model is mock_model
+
+    @patch('src.perplexity.model_loader.get_model_config')
+    @patch('src.perplexity.model_loader._load_tokenizer')
+    @patch('src.perplexity.model_loader._load_model_with_attention_fallback')
+    def test_post_load_memory_no_limit_set(self, mock_load_model, mock_load_tokenizer, mock_get_config, mock_cuda_available, monkeypatch):
+        """Test that post-load check is skipped when no memory limit is set."""
+        mock_config = ModelConfig(
+            name="test-model",
+            hf_name="test/model",
+            max_length=2048,
+            memory_gb=4.0,
+            supports_flash_attention=True
+        )
+        mock_get_config.return_value = mock_config
+
+        mock_tokenizer = Mock()
+        mock_tokenizer.pad_token = "[PAD]"
+        mock_load_tokenizer.return_value = mock_tokenizer
+
+        mock_model = Mock()
+        mock_model.eval = Mock()
+        mock_load_model.return_value = mock_model
+
+        # High VRAM but no limit set — should succeed
+        monkeypatch.setattr(torch.cuda, "memory_allocated", lambda: 20 * 1024**3)
+
+        model, tokenizer = load_model_and_tokenizer("test-model", device="cuda")
+        assert model is mock_model
+
+
+class TestGradientCheckpointingRemoved:
+    """Verify gradient checkpointing is not enabled during eval-only loading."""
+
+    @patch('src.perplexity.model_loader.AutoModelForCausalLM.from_pretrained')
+    def test_no_gradient_checkpointing_on_flash(self, mock_model_load):
+        """Test that gradient checkpointing is not enabled with flash attention."""
+        from src.perplexity.model_loader import _load_model_with_attention_fallback
+
+        mock_model = Mock()
+        mock_model.gradient_checkpointing_enable = Mock()
+        mock_model_load.return_value = mock_model
+
+        model_config = ModelConfig(
+            name="test-model",
+            hf_name="test/model",
+            max_length=2048,
+            memory_gb=4.0,
+            supports_flash_attention=True
+        )
+
+        _load_model_with_attention_fallback(model_config, "cuda", True)
+        mock_model.gradient_checkpointing_enable.assert_not_called()
+
+    @patch('src.perplexity.model_loader.AutoModelForCausalLM.from_pretrained')
+    def test_no_gradient_checkpointing_on_eager(self, mock_model_load):
+        """Test that gradient checkpointing is not enabled with eager attention."""
+        from src.perplexity.model_loader import _load_model_with_attention_fallback
+
+        mock_model = Mock()
+        mock_model.gradient_checkpointing_enable = Mock()
+        mock_model_load.return_value = mock_model
+
+        model_config = ModelConfig(
+            name="test-model",
+            hf_name="test/model",
+            max_length=2048,
+            memory_gb=4.0,
+            supports_flash_attention=False
+        )
+
+        _load_model_with_attention_fallback(model_config, "cuda", True)
+        mock_model.gradient_checkpointing_enable.assert_not_called()
+
+
+class TestCudaAllocConf:
+    """Test PYTORCH_ALLOC_CONF is set for memory fragmentation."""
+
+    def test_alloc_conf_set(self):
+        """Test that PYTORCH_ALLOC_CONF is set by module import."""
+        import os
+        assert "PYTORCH_ALLOC_CONF" in os.environ
+        assert "max_split_size_mb" in os.environ["PYTORCH_ALLOC_CONF"]
 
 
 class TestIntegrationScenarios:

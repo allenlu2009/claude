@@ -71,7 +71,8 @@ def mock_tokenizer():
     tokenizer = Mock()
     tokenizer.pad_token = "[PAD]"
     tokenizer.eos_token = "[EOS]"
-    
+    tokenizer.__len__ = Mock(return_value=50000)  # Standard vocab size
+
     # Mock tokenization to return simple token sequences
     def mock_tokenize(text, return_tensors=None, truncation=False):
         # Simple tokenization: split by spaces and assign incremental IDs

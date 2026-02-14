@@ -350,10 +350,10 @@ class TestEvaluatorEdgeCases:
     def test_evaluate_model_with_error_chunks(self, mock_model, chunk_params):
         """Test evaluation when model throws errors on some chunks."""
         evaluator = PerplexityEvaluator()
-        
+
         samples = [torch.tensor([[1, 2, 3]]), torch.tensor([[4, 5, 6]])]
         begin_locs = [(0, 3, 0), (3, 6, 3)]
-        
+
         # Mock model to throw error on first chunk, succeed on second
         def mock_model_call(input_ids, labels=None):
             if input_ids[0, 0].item() == 1:  # First chunk
@@ -361,13 +361,75 @@ class TestEvaluatorEdgeCases:
             output = Mock()
             output.loss = torch.tensor(2.0)
             return output
-        
+
         mock_model.side_effect = mock_model_call
-        
+
         result = evaluator.evaluate_model_on_chunks(
             samples, begin_locs, mock_model, "test-model", "test-dataset", chunk_params
         )
-        
+
         # Should still return valid result from successful chunks
         assert result.num_tokens > 0
         assert result.perplexity > 0
+
+
+class TestTokenIdValidation:
+    """Test token ID range validation in tokenize_and_chunk."""
+
+    def test_out_of_range_tokens_clamped(self):
+        """Test that out-of-range token IDs are clamped to vocab size."""
+        evaluator = PerplexityEvaluator()
+
+        mock_tokenizer = Mock()
+        mock_tokenizer.__len__ = Mock(return_value=100)  # vocab_size = 100
+        # Return tokens with some IDs >= vocab_size
+        token_ids = list(range(50)) + [150, 200, 99]  # 150, 200 are out of range
+        mock_tokenizer.return_value = {"input_ids": torch.tensor([token_ids])}
+
+        chunk_params = ChunkParams(block_size=128, stride_ratio=1.0, batch_size=1)
+
+        samples, begin_locs = evaluator.tokenize_and_chunk(
+            "test text", mock_tokenizer, chunk_params, max_length=2048
+        )
+
+        # All token IDs should be < vocab_size (100)
+        for sample in samples:
+            assert sample.max().item() < 100
+
+    def test_valid_tokens_unchanged(self):
+        """Test that valid token IDs are not modified."""
+        evaluator = PerplexityEvaluator()
+
+        mock_tokenizer = Mock()
+        mock_tokenizer.__len__ = Mock(return_value=1000)
+        token_ids = list(range(50))  # All valid
+        mock_tokenizer.return_value = {"input_ids": torch.tensor([token_ids])}
+
+        chunk_params = ChunkParams(block_size=128, stride_ratio=1.0, batch_size=1)
+
+        samples, begin_locs = evaluator.tokenize_and_chunk(
+            "test text", mock_tokenizer, chunk_params, max_length=2048
+        )
+
+        # Tokens should be unchanged
+        all_tokens = torch.cat(samples, dim=1)
+        assert all_tokens.tolist()[0] == token_ids
+
+    def test_all_tokens_out_of_range(self):
+        """Test edge case where all tokens are out of range."""
+        evaluator = PerplexityEvaluator()
+
+        mock_tokenizer = Mock()
+        mock_tokenizer.__len__ = Mock(return_value=10)
+        token_ids = [50, 60, 70, 80, 90]  # All out of range for vocab_size=10
+        mock_tokenizer.return_value = {"input_ids": torch.tensor([token_ids])}
+
+        chunk_params = ChunkParams(block_size=128, stride_ratio=1.0, batch_size=1)
+
+        samples, begin_locs = evaluator.tokenize_and_chunk(
+            "test text", mock_tokenizer, chunk_params, max_length=2048
+        )
+
+        # All should be clamped to 9 (vocab_size - 1)
+        for sample in samples:
+            assert sample.max().item() == 9

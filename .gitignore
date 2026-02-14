@@ -92,3 +92,8 @@ results_*.json
 *.log
 debug_*.log
 *.o
+
+# claude setting
+.claude/settings.local.json
+
+

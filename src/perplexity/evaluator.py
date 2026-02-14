@@ -65,6 +65,17 @@ class PerplexityEvaluator:
 
         logger.info(f"Tokenized to {seq_len} tokens")
 
+        # Validate token IDs are within vocabulary range to prevent CUDA assertion errors
+        vocab_size = len(tokenizer)
+        max_token_id = tokens.max().item()
+        if max_token_id >= vocab_size:
+            num_oob = (tokens >= vocab_size).sum().item()
+            logger.warning(
+                f"Found {num_oob} out-of-range token IDs (max={max_token_id}, "
+                f"vocab_size={vocab_size}). Clamping to vocab range."
+            )
+            tokens = tokens.clamp(max=vocab_size - 1)
+
         # Use block size from chunk params (already validated at CLI level)
         block_size = chunk_params.block_size
         stride = int(block_size * chunk_params.stride_ratio)

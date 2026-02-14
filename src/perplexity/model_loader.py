@@ -6,11 +6,16 @@ automatic memory optimization and flash attention fallback strategies.
 """
 
 import logging
+import os
 import torch
 from typing import Tuple, Optional, Dict, Any
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForImageTextToText, AutoConfig, BitsAndBytesConfig  # type: ignore
 from huggingface_hub import hf_hub_download
 from ..config.model_configs import get_model_config, ModelConfig
+
+# Reduce CUDA memory fragmentation on consumer GPUs (e.g. RTX 3060 12GB)
+if "PYTORCH_ALLOC_CONF" not in os.environ:
+    os.environ["PYTORCH_ALLOC_CONF"] = "max_split_size_mb:128"
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -239,13 +244,28 @@ def load_model_and_tokenizer(
             tokenizer.pad_token = tokenizer.eos_token  # type: ignore
             logger.info("Set pad_token to eos_token")
 
-        # Log final memory usage
+        # Validate actual VRAM usage after loading
         if device == "cuda":
-            final_memory = torch.cuda.memory_allocated() / (1024**2)
-            logger.info(f"Model loaded. GPU memory usage: {final_memory:.1f} MB")
+            actual_memory_mb = torch.cuda.memory_allocated() / (1024**2)
+            actual_memory_gb = actual_memory_mb / 1024
+            logger.info(f"Model loaded. GPU memory usage: {actual_memory_mb:.1f} MB ({actual_memory_gb:.2f} GB)")
+
+            if memory_limit_gb is not None and actual_memory_gb > memory_limit_gb:
+                logger.warning(
+                    f"Model '{model_name}' actual VRAM ({actual_memory_gb:.2f} GB) "
+                    f"exceeds memory limit ({memory_limit_gb} GB). "
+                    f"Estimated was {model_config.memory_gb} GB. Unloading model."
+                )
+                unload_model(model, tokenizer)
+                raise MemoryConstraintError(
+                    f"Model '{model_name}' actual VRAM usage ({actual_memory_gb:.2f} GB) "
+                    f"exceeds memory limit ({memory_limit_gb} GB)"
+                )
 
         return model, tokenizer
 
+    except MemoryConstraintError:
+        raise
     except Exception as e:
         logger.error(f"Failed to load model {model_name}: {str(e)}")
         raise ModelLoadError(f"Failed to load model {model_name}") from e
@@ -291,7 +311,25 @@ def _load_model_with_attention_fallback(
         "dtype": "auto",
         "low_cpu_mem_usage": True,
     }
-    
+
+    # Add quantization config for 4-bit or 8-bit loading via bitsandbytes
+    if model_config.load_in_4bit or model_config.load_in_8bit:
+        quant_kwargs = {}
+        if model_config.load_in_4bit:
+            quant_kwargs["load_in_4bit"] = True
+            quant_kwargs["bnb_4bit_compute_dtype"] = torch.bfloat16
+            quant_kwargs["bnb_4bit_quant_type"] = "nf4"
+            logger.info("Configuring 4-bit quantization (NF4, bfloat16 compute)")
+        elif model_config.load_in_8bit:
+            quant_kwargs["load_in_8bit"] = True
+            logger.info("Configuring 8-bit quantization")
+
+        base_config["quantization_config"] = BitsAndBytesConfig(**quant_kwargs)
+        # Reason: bitsandbytes quantization requires device_map="auto" and is
+        # incompatible with explicit dtype, so remove dtype and force device_map
+        base_config.pop("dtype", None)
+        base_config["device_map"] = "auto"
+
     # Add GGUF support if specified
     if model_config.gguf_file:
         logger.info(f"Preparing to load GGUF model: {model_config.gguf_file} from {hf_name}")
@@ -309,26 +347,9 @@ def _load_model_with_attention_fallback(
                 logger.error(f"Failed to load base configuration: {str(e)}")
                 raise
 
-    # Add bitsandbytes quantization support
-    if model_config.load_in_4bit:
-        logger.info("Enabling 4-bit quantization (BitsAndBytesConfig)")
-        base_config["quantization_config"] = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-        )
-    elif model_config.load_in_8bit:
-        logger.info("Enabling 8-bit quantization (BitsAndBytesConfig)")
-        base_config["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
-
-    # Add device mapping for GPU
-    if device == "cuda":
-        # bitsandbytes recommendeds device_map="auto" for proper quantization loading
-        if model_config.load_in_4bit or model_config.load_in_8bit:
-            base_config["device_map"] = "auto"
-        else:
-            base_config["device_map"] = "cuda"
+    # Add device mapping for GPU (skip if already set by quantization config)
+    if device == "cuda" and "device_map" not in base_config:
+        base_config["device_map"] = "cuda"
 
     # Try flash attention first if supported and requested
     if use_flash_attention and model_config.supports_flash_attention:
@@ -337,11 +358,6 @@ def _load_model_with_attention_fallback(
             flash_config = {**base_config, "attn_implementation": "flash_attention_2"}
 
             model = model_class.from_pretrained(hf_name, **flash_config)  # type: ignore
-
-            # Enable gradient checkpointing for memory efficiency
-            if hasattr(model, "gradient_checkpointing_enable"):
-                model.gradient_checkpointing_enable()
-                logger.info("Gradient checkpointing enabled")
 
             logger.info("Model loaded successfully with flash attention")
             return model
@@ -356,11 +372,6 @@ def _load_model_with_attention_fallback(
         eager_config = {**base_config, "attn_implementation": "eager"}
 
         model = model_class.from_pretrained(hf_name, **eager_config)  # type: ignore
-
-        # Enable gradient checkpointing for memory efficiency
-        if hasattr(model, "gradient_checkpointing_enable"):
-            model.gradient_checkpointing_enable()
-            logger.info("Gradient checkpointing enabled")
 
         logger.info("Model loaded successfully with eager attention")
         return model
@@ -379,10 +390,6 @@ def unload_model(model: Any, tokenizer: Optional[Any] = None) -> None:
         tokenizer: Optional tokenizer to unload
     """
     logger.info("Unloading model and clearing memory")
-
-    # Clear model from GPU if possible without moving it to CPU
-    # Just deleting references and clearing cache is safer for large models
-    pass
 
     # Delete references
     if tokenizer is not None:
